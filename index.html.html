@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>초등 6학년 영단어 마스터! v2</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            max-height: 650px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        .level-badge {
+            background: #3182ce;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        .score-box {
+            background: #edf2f7;
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+        .question-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .english-word {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #2b6cb0;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .hint {
+            font-size: 1.1rem;
+            color: #718096;
+            height: 24px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .option-btn {
+            background: #f7fafc;
+            border: 3px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 25px 20px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+        .option-btn.correct {
+            background: #48bb78 !important;
+            border-color: #48bb78 !important;
+            color: white !important;
+        }
+        .option-btn.wrong {
+            background: #f56565 !important;
+            border-color: #f56565 !important;
+            color: white !important;
+        }
+        /* 결과 및 복습 화면 */
+        #result-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            display: none;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        #result-screen h2 {
+            font-size: 2.3rem;
+            color: #2b6cb0;
+            margin: 10px 0;
+        }
+        #result-screen p {
+            font-size: 1.3rem;
+            color: #4a5568;
+            margin-bottom: 15px;
+        }
+        /* 오답 노트 스타일 */
+        .wrong-list-container {
+            width: 100%;
+            max-width: 500px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #fff5f5;
+            border: 2px solid #fed7d7;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .wrong-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed #feb2b2;
+            font-size: 1.1rem;
+        }
+        .wrong-item:last-child { border-bottom: none; }
+        .wrong-word { font-weight: bold; color: #c53030; }
+        .wrong-meaning { color: #4a5568; }
+
+        /* 버튼 그룹 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .action-btn {
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-retry { background: #4299e1; }
+        .btn-next-lvl { background: #ed8936; display: none; } /* 만점자용 비밀 버튼 */
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 상단 바 -->
+    <div class="header">
+        <div>
+            <span id="level-indicator" class="level-badge">기본 단어 (Level 1)</span>
+            <span id="progress" style="margin-left: 10px;">문제: 1 / 20</span>
+        </div>
+        <div class="score-box">점수: <span id="score">0</span>점</div>
+    </div>
+
+    <!-- 문제 표시 구역 -->
+    <div class="question-container">
+        <div class="english-word" id="word-display">-</div>
+        <div class="hint" id="hint-display">정확한 뜻의 버튼을 터치하세요!</div>
+    </div>
+
+    <!-- 사지선다 보기 구역 -->
+    <div class="options-grid">
+        <button class="option-btn" onclick="checkAnswer(0)">-</button>
+        <button class="option-btn" onclick="checkAnswer(1)">-</button>
+        <button class="option-btn" onclick="checkAnswer(2)">-</button>
+        <button class="option-btn" onclick="checkAnswer(3)">-</button>
+    </div>
+
+    <!-- 결과 및 오답 공부 화면 -->
+    <div id="result-screen">
+        <h2 id="result-title">🎉 게임 종료! 🎉</h2>
+        <p>나의 최종 점수: <span id="final-score">0</span> / 100점</p>
+        
+        <!-- 오답 목록 구역 (틀린 문제가 있을 때만 노출) -->
+        <div id="wrong-section" style="width:100%; display:none; text-align:center;">
+            <p style="font-size:1.1rem; font-weight:bold; color:#e53e3e; margin-bottom:5px;">✍️ 틀린 단어 모아보기 (다시 외워봐요!)</p>
+            <div class="wrong-list-container" id="wrong-list"></div>
+        </div>
+
+        <!-- 축하 메시지 (만점자용) -->
+        <p id="perfect-msg" style="color:#38a169; font-weight:bold; display:none; text-align:center;">
+            🥇 대단해요! 만점입니다!<br>더 어려운 새로운 단어 목록이 열렸습니다!
+        </p>
+
+        <div class="btn-group">
+            <button class="action-btn btn-retry" onclick="restartCurrentLevel()">다시 도전하기</button>
+            <button class="action-btn btn-next-lvl" id="next-level-btn" onclick="loadNextLevel()">Level 2 도전하기 🚀</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // [Level 1] 기본 단어 목록 (총 25개 제공 -> 이 중 20개 랜덤 출제)
+    const level1Data = [
+        { word: "experience", meaning: "경험" }, { word: "environment", meaning: "환경" },
+        { word: "volunteer", meaning: "자원봉사자" }, { word: "interesting", meaning: "흥미로운" },
+        { word: "traditional", meaning: "전통적인" }, { word: "communicate", meaning: "의사소통하다" },
+        { word: "healthy", meaning: "건강한" }, { word: "celebrate", meaning: "축하하다" },
+        { word: "different", meaning: "다른" }, { word: "protect", meaning: "보호하다" },
+        { word: "scientist", meaning: "과학자" }, { word: "tomorrow", meaning: "내일" },
+        { word: "understand", meaning: "이해하다" }, { word: "culture", meaning: "문화" },
+        { word: "festival", meaning: "축제" }, { word: "accident", meaning: "사고" },
+        { word: "beautiful", meaning: "아름다운" }, { word: "dangerous", meaning: "위험한" },
+        { word: "education", meaning: "교육" }, { word: "important", meaning: "중요한" },
+        { word: "neighbor", meaning: "이웃" }, { word: "remember", meaning: "기억하다" },
+        { word: "stomach", meaning: "위, 배" }, { word: "together", meaning: "함께" },
+        { word: "vegetable", meaning: "채소" }
+    ];
+
+    // [Level 2] 다 맞은 친구들을 위한 새롭고 더 어려운 심화 단어 목록
+    const level2Data = [
+        { word: "accomplish", meaning: "성취하다" }, { word: "biodiversity", meaning: "생물 다양성" },
+        { word: "challenge", meaning: "도전" }, { word: "destination", meaning: "목적지" },
+        { word: "enthusiasm", meaning: "열정" }, { word: "foundation", meaning: "기초, 토대" },
+        { word: "generation", meaning: "세대" }, { word: "harmony", meaning: "조화" },
+        { word: "ingredient", meaning: "재료, 성분" }, { word: "journey", meaning: "여정, 여행" },
+        { word: "knowledge", meaning: "지식" }, { word: "masterpiece", meaning: "걸작, 명작" },
+        { word: "navigation", meaning: "항해, 길찾기" }, { word: "opportunity", meaning: "기회" },
+        { word: "permission", meaning: "허가, 허락" }, { word: "qualification", meaning: "자격" },
+        { word: "responsibility", meaning: "책임" }, { word: "satellite", meaning: "인공위성" },
+        { word: "temperature", meaning: "온도" }, { word: "universe", meaning: "우주" },
+        { word: "valuable", meaning: "가치 있는" }, { word: "wilderness", meaning: "황무지, 야생" },
+        { word: "mastery", meaning: "숙달, 통달" }, { word: "creativity", meaning: "창의성" },
+        { word: "independence", meaning: "독립" }
+    ];
+
+    let currentBank = level1Data; // 현재 단어 풀
+    let currentLevel = 1;
+    let currentQuestions = [];
+    let currentIdx = 0;
+    let score = 0;
+    let isQuizActive = true;
+    let wrongAnswers = []; // 틀린 단어 모으는 배열
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    // 게임 시작 및 레벨 초기화
+    function startGame(level) {
+        currentLevel = level;
+        currentBank = level === 1 ? level1Data : level2Data;
+        
+        document.getElementById("level-indicator").innerText = level === 1 ? "기본 단어 (Level 1)" : "심화 단어 (Level 2)";
+        document.getElementById("result-screen").style.display = "none";
+        document.getElementById("perfect-msg").style.display = "none";
+        document.getElementById("next-level-btn").style.display = "none";
+        
+        score = 0;
+        currentIdx = 0;
+        isQuizActive = true;
+        wrongAnswers = [];
+        document.getElementById("score").innerText = score;
+        
+        // 전체 풀에서 무작위로 20문제 추출
+        let shuffledBank = shuffle([...currentBank]);
+        currentQuestions = shuffledBank.slice(0, 20);
+        
+        loadQuestion();
+    }
+
+    // 문제 불러오기
+    function loadQuestion() {
+        if (currentIdx >= currentQuestions.length) {
+            endGame();
+            return;
+        }
+
+        isQuizActive = true;
+        document.getElementById("progress").innerText = `문제: ${currentIdx + 1} / ${currentQuestions.length}`;
+        
+        let currentQ = currentQuestions[currentIdx];
+        document.getElementById("word-display").innerText = currentQ.word;
+
+        // 보기 구성 (정답 1 + 현재 은행 풀 안에서 오답 3)
+        let options = [currentQ.meaning];
+        let wrongChoices = currentBank.filter(item => item.meaning !== currentQ.meaning);
+        shuffle(wrongChoices);
+        
+        for(let i=0; i<3; i++) {
+            options.push(wrongChoices[i].meaning);
+        }
+        shuffle(options);
+
+        const buttons = document.querySelectorAll(".option-btn");
+        buttons.forEach((btn, index) => {
+            btn.innerText = options[index];
+            btn.className = "option-btn";
+        });
+    }
+
+    // 정답 체크 (문제당 5점씩 20문제 = 100점)
+    function checkAnswer(selectedIdx) {
+        if (!isQuizActive) return;
+        isQuizActive = false;
+
+        const buttons = document.querySelectorAll(".option-btn");
+        const selectedText = buttons[selectedIdx].innerText;
+        const currentQ = currentQuestions[currentIdx];
+        const correctText = currentQ.meaning;
+
+        if (selectedText === correctText) {
+            buttons[selectedIdx].classList.add("correct");
+            score += 5; 
+            document.getElementById("score").innerText = score;
+        } else {
+            buttons[selectedIdx].classList.add("wrong");
+            buttons.forEach(btn => {
+                if (btn.innerText === correctText) btn.classList.add("correct");
+            });
+            // 틀린 단어 저장!
+            wrongAnswers.push(currentQ);
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            loadQuestion();
+        }, 1100);
+    }
+
+    // 게임 종료 및 결과 보고서 화면
+    function endGame() {
+        document.getElementById("result-screen").style.display = "flex";
+        document.getElementById("final-score").innerText = score;
+
+        const wrongSection = document.getElementById("wrong-section");
+        const wrongListContainer = document.getElementById("wrong-list");
+        wrongListContainer.innerHTML = ""; // 기존 오답 초기화
+
+        if (wrongAnswers.length > 0) {
+            // 틀린 문제가 있다면 오답노트 출력
+            wrongSection.style.display = "block";
+            wrongAnswers.forEach(item => {
+                const row = document.createElement("div");
+                row.className = "wrong-item";
+                row.innerHTML = `<span class="wrong-word">${item.word}</span><span class="wrong-meaning">${item.meaning}</span>`;
+                wrongListContainer.appendChild(row);
+            });
+        } else {
+            // 100점 만점자 특전 활성화
+            wrongSection.style.display = "none";
+            document.getElementById("perfect-msg").style.display = "block";
+            if (currentLevel === 1) {
+                document.getElementById("next-level-btn").style.display = "inline-block";
+            }
+        }
+    }
+
+    function restartCurrentLevel() {
+        startGame(currentLevel);
+    }
+
+    function loadNextLevel() {
+        startGame(2);
+    }
+
+    // 페이지 로드 시 게임 자동 시작 (기본 레벨 1)
+    window.onload = () => startGame(1);
+</script>
+
+</body>
+</html>
